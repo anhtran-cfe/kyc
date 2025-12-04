@@ -1,0 +1,5 @@
+{
+  "name": "PDF to Excel Converter AI",
+  "description": "Ứng dụng trích xuất dữ liệu bảng từ file PDF và xuất ra định dạng Excel (CSV) sử dụng Gemini AI.",
+  "requestFramePermissions": []
+}
