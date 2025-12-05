@@ -94,31 +94,25 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 if 'username' not in st.session_state:
     st.session_state.username = None
 
-# Function to hash password
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Function to verify credentials
 def verify_credentials(username, password):
     try:
-        # Get credentials from secrets
         stored_username = st.secrets["AUTH"]["username"]
         stored_password_hash = st.secrets["AUTH"]["password_hash"]
         
-        # Verify username and password
         if username == stored_username and hash_password(password) == stored_password_hash:
             return True
         return False
     except Exception as e:
         return False
 
-# Login page
 def login_page():
     st.markdown("""
         <div class="main-header">
@@ -150,7 +144,6 @@ def login_page():
         
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # Footer
     st.markdown("""
         <div class='footer'>
             <p style='font-size: 1.1rem; font-weight: 600; color: #1e3a8a; margin-bottom: 0.5rem;'>
@@ -165,9 +158,7 @@ def login_page():
         </div>
     """, unsafe_allow_html=True)
 
-# Main app (after login)
 def main_app():
-    # Logout button
     col1, col2 = st.columns([6, 1])
     with col2:
         if st.button("🚪 Logout", key="logout_btn"):
@@ -175,7 +166,6 @@ def main_app():
             st.session_state.username = None
             st.rerun()
     
-    # Initialize API
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=api_key)
@@ -191,7 +181,6 @@ def main_app():
         </div>
     """, unsafe_allow_html=True)
     
-    # Welcome message
     st.markdown(f"### 👋 Welcome, {st.session_state.username}!")
     st.markdown("---")
 
@@ -226,6 +215,13 @@ def main_app():
             with col2:
                 st.info(f"📄 **Selected File:** {uploaded_file.name} ({uploaded_file.size / 1024:.2f} KB)")
             
+            # Set default prompt
+            custom_prompt = """Analyze this PDF document and extract all tabular data. 
+Convert the information into a structured format suitable for Excel.
+Include all relevant columns and rows, maintaining the original structure as much as possible.
+Return the data in a clear, organized format."""
+            
+            # Advanced options
             with st.expander("⚙️ Advanced Extraction Options (Optional)"):
                 st.markdown("Customize how the data is extracted from your PDF:")
                 
@@ -243,16 +239,6 @@ Maintain the original structure with all columns and rows.
 Format the output as a clear, organized table.""",
                         height=120
                     )
-                else:
-                    custom_prompt = """Analyze this PDF document and extract all tabular data. 
-Convert the information into a structured format suitable for Excel.
-Include all relevant columns and rows, maintaining the original structure as much as possible.
-Return the data in a clear, organized format."""
-            else:
-                custom_prompt = """Analyze this PDF document and extract all tabular data. 
-Convert the information into a structured format suitable for Excel.
-Include all relevant columns and rows, maintaining the original structure as much as possible.
-Return the data in a clear, organized format."""
             
             col1, col2, col3 = st.columns([1, 2, 1])
             with col2:
@@ -370,7 +356,6 @@ Return the data in a clear, organized format."""
         </div>
     """, unsafe_allow_html=True)
 
-# Main app logic
 if st.session_state.logged_in:
     main_app()
 else:
