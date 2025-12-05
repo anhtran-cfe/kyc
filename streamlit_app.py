@@ -7,168 +7,317 @@ import os
 
 # Page configuration
 st.set_page_config(
-    page_title="PDF to Excel Converter",
-    page_icon="📄",
-    layout="wide"
+    page_title="PDF to Excel Converter - BIDV",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# Title
-st.title("📄 PDF to Excel Converter using Gemini")
-st.markdown("Upload a PDF file and convert it to Excel using Google's Gemini AI")
-
-# API Key Configuration
-st.sidebar.header("⚙️ Configuration")
-
-# Option 1: Use Streamlit secrets (recommended for deployment)
-# Option 2: User input (for testing)
-api_key_option = st.sidebar.radio(
-    "API Key Source:",
-    ["Use Streamlit Secrets", "Manual Input"]
-)
-
-if api_key_option == "Use Streamlit Secrets":
-    try:
-        api_key = st.secrets["GOOGLE_API_KEY"]
-        st.sidebar.success("✅ API Key loaded from secrets")
-    except:
-        st.sidebar.error("❌ No API key found in secrets. Please add it to .streamlit/secrets.toml")
-        api_key = None
-else:
-    api_key = st.sidebar.text_input(
-        "Enter your Google API Key:",
-        type="password",
-        help="Get your API key from https://makersuite.google.com/app/apikey"
-    )
-    if api_key:
-        st.sidebar.success("✅ API Key entered")
-
-# Configure Gemini if API key is available
-if api_key:
-    genai.configure(api_key=api_key)
+# Custom CSS for BIDV branding
+st.markdown("""
+    <style>
+    /* Hide sidebar completely */
+    [data-testid="stSidebar"] {
+        display: none;
+    }
     
-    # Model selection
-    model_name = st.sidebar.selectbox(
-        "Select Gemini Model:",
-        ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"],
-        index=0
-    )
+    .main-header {
+        text-align: center;
+        padding: 2rem 0;
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        color: white;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    .main-header h1 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    .main-header p {
+        margin: 0.5rem 0 0 0;
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+    .footer {
+        text-align: center;
+        padding: 2rem 0;
+        color: #666;
+        border-top: 1px solid #e5e5e5;
+        margin-top: 3rem;
+    }
+    .stButton>button {
+        width: 100%;
+        background-color: #1e3a8a;
+        color: white;
+        font-weight: 600;
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: none;
+        font-size: 1.1rem;
+    }
+    .stButton>button:hover {
+        background-color: #3b82f6;
+        border: none;
+    }
+    .upload-section {
+        background-color: #f8fafc;
+        padding: 2rem;
+        border-radius: 10px;
+        border: 2px dashed #cbd5e1;
+        margin: 2rem 0;
+    }
+    .info-box {
+        background-color: #f0f9ff;
+        border-left: 4px solid #1e3a8a;
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1rem 0;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Initialize API configuration (hidden from users)
+try:
+    api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=api_key)
+    model_name = "gemini-2.0-flash-exp"  # Best model, hardcoded
+    system_ready = True
+except Exception as e:
+    system_ready = False
+
+# Header
+st.markdown("""
+    <div class="main-header">
+        <h1>📊 PDF to Excel Converter</h1>
+        <p>Convert your PDF documents to Excel format instantly</p>
+    </div>
+""", unsafe_allow_html=True)
+
+if system_ready:
+    # Instructions
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("""
+        <div class="info-box">
+            <h3 style="margin-top: 0;">📋 How to use:</h3>
+            <ol style="margin-bottom: 0;">
+                <li>Upload your PDF file (max 200MB)</li>
+                <li>Click "Convert to Excel"</li>
+                <li>Download your converted file</li>
+            </ol>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<div class='upload-section'>", unsafe_allow_html=True)
     
     # File uploader
-    st.header("📤 Upload PDF")
+    st.markdown("### 📤 Upload Your PDF")
     uploaded_file = st.file_uploader(
         "Choose a PDF file",
         type=['pdf'],
-        help="Upload the PDF file you want to convert to Excel"
+        help="Maximum file size: 200MB",
+        label_visibility="collapsed"
     )
+    
+    st.markdown("</div>", unsafe_allow_html=True)
     
     if uploaded_file:
         # Display file info
-        st.info(f"📄 File: {uploaded_file.name} ({uploaded_file.size / 1024:.2f} KB)")
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.info(f"📄 **Selected File:** {uploaded_file.name} ({uploaded_file.size / 1024:.2f} KB)")
         
-        # Prompt configuration
-        st.header("✏️ Customize Prompt (Optional)")
-        default_prompt = """Analyze this PDF document and extract all tabular data. 
-        Convert the information into a structured format suitable for Excel.
-        Include all relevant columns and rows, maintaining the original structure as much as possible.
-        Return the data in a clear, organized format."""
+        # Advanced options (optional, collapsed)
+        with st.expander("⚙️ Advanced Extraction Options (Optional)"):
+            st.markdown("Customize how the data is extracted from your PDF:")
+            
+            extraction_mode = st.radio(
+                "Extraction Mode:",
+                ["Automatic (Recommended)", "Custom Instructions"],
+                index=0
+            )
+            
+            if extraction_mode == "Custom Instructions":
+                custom_prompt = st.text_area(
+                    "Custom extraction instructions:",
+                    value="""Extract all tabular data from this PDF document.
+Maintain the original structure with all columns and rows.
+Format the output as a clear, organized table.""",
+                    height=120
+                )
+            else:
+                custom_prompt = """Analyze this PDF document and extract all tabular data. 
+Convert the information into a structured format suitable for Excel.
+Include all relevant columns and rows, maintaining the original structure as much as possible.
+Return the data in a clear, organized format."""
+        else:
+            custom_prompt = """Analyze this PDF document and extract all tabular data. 
+Convert the information into a structured format suitable for Excel.
+Include all relevant columns and rows, maintaining the original structure as much as possible.
+Return the data in a clear, organized format."""
         
-        custom_prompt = st.text_area(
-            "Custom Prompt:",
-            value=default_prompt,
-            height=150,
-            help="Customize the prompt to guide Gemini's extraction"
-        )
+        # Convert button
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            convert_button = st.button("🚀 Convert to Excel", type="primary")
         
-        # Process button
-        if st.button("🚀 Convert to Excel", type="primary"):
-            with st.spinner("Processing PDF with Gemini..."):
+        if convert_button:
+            with st.spinner("⏳ Converting your file... This may take a moment."):
                 try:
                     # Save uploaded file temporarily
                     with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
                         tmp_file.write(uploaded_file.getvalue())
                         tmp_path = tmp_file.name
                     
-                    # Upload file to Gemini
-                    uploaded_gemini_file = genai.upload_file(tmp_path)
-                    st.success(f"✅ File uploaded to Gemini: {uploaded_gemini_file.name}")
-                    
-                    # Generate content
+                    # Process the file
+                    uploaded_file_obj = genai.upload_file(tmp_path)
                     model = genai.GenerativeModel(model_name)
-                    response = model.generate_content([uploaded_gemini_file, custom_prompt])
+                    response = model.generate_content([uploaded_file_obj, custom_prompt])
                     
-                    # Display response
-                    st.header("📊 Gemini Response")
-                    st.markdown(response.text)
+                    # Display success
+                    st.success("✅ Conversion completed successfully!")
                     
-                    # Try to parse response as CSV/table
-                    st.header("📥 Download Options")
+                    # Show results
+                    st.markdown("### 📊 Conversion Results")
                     
-                    # Option 1: Download as text
-                    st.download_button(
-                        label="💾 Download as Text",
-                        data=response.text,
-                        file_name=f"{Path(uploaded_file.name).stem}_output.txt",
-                        mime="text/plain"
-                    )
+                    # Create tabs for different views
+                    tab1, tab2 = st.tabs(["📝 Preview", "📥 Download"])
                     
-                    # Option 2: Try to create Excel (if structured data)
-                    try:
-                        # Attempt to parse the response into a DataFrame
-                        # This is a simple example - you may need to customize based on your output format
-                        lines = response.text.strip().split('\n')
+                    with tab1:
+                        st.markdown("**Extracted Content:**")
+                        st.text_area(
+                            "Preview",
+                            value=response.text,
+                            height=400,
+                            label_visibility="collapsed"
+                        )
+                    
+                    with tab2:
+                        col1, col2 = st.columns(2)
                         
-                        # Try to detect if it's CSV-like
-                        if ',' in lines[0] or '\t' in lines[0] or '|' in lines[0]:
-                            # Determine delimiter
-                            delimiter = ',' if ',' in lines[0] else '\t' if '\t' in lines[0] else '|'
-                            
-                            # Create DataFrame
-                            data = [line.split(delimiter) for line in lines]
-                            df = pd.DataFrame(data[1:], columns=data[0])
-                            
-                            # Create Excel file
-                            output = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
-                            df.to_excel(output.name, index=False)
-                            
-                            with open(output.name, 'rb') as f:
-                                st.download_button(
-                                    label="📊 Download as Excel",
-                                    data=f.read(),
-                                    file_name=f"{Path(uploaded_file.name).stem}_output.xlsx",
-                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                )
-                            
-                            # Display preview
-                            st.subheader("Preview:")
-                            st.dataframe(df)
-                            
-                            os.unlink(output.name)
-                    except Exception as e:
-                        st.warning(f"⚠️ Could not automatically convert to Excel. You can download as text and manually format it. Error: {str(e)}")
+                        with col1:
+                            # Download as text
+                            st.download_button(
+                                label="📄 Download as Text File",
+                                data=response.text,
+                                file_name=f"{Path(uploaded_file.name).stem}_converted.txt",
+                                mime="text/plain",
+                                use_container_width=True
+                            )
+                        
+                        with col2:
+                            # Try to create Excel
+                            try:
+                                lines = response.text.strip().split('\n')
+                                
+                                # Try to detect structured data
+                                if '|' in lines[0] or ',' in lines[0] or '\t' in lines[0]:
+                                    delimiter = '|' if '|' in lines[0] else ',' if ',' in lines[0] else '\t'
+                                    
+                                    # Clean markdown table formatting
+                                    if '|' in lines[0]:
+                                        lines = [line for line in lines if '|' in line and not line.strip().startswith('|--')]
+                                    
+                                    data = [line.split(delimiter) for line in lines]
+                                    # Clean data
+                                    data = [[cell.strip() for cell in row] for row in data]
+                                    
+                                    # Remove empty rows
+                                    data = [row for row in data if any(cell.strip() for cell in row)]
+                                    
+                                    if len(data) > 1:
+                                        df = pd.DataFrame(data[1:], columns=data[0])
+                                        
+                                        # Create Excel file
+                                        output = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
+                                        df.to_excel(output.name, index=False, engine='openpyxl')
+                                        
+                                        with open(output.name, 'rb') as f:
+                                            st.download_button(
+                                                label="📊 Download as Excel",
+                                                data=f.read(),
+                                                file_name=f"{Path(uploaded_file.name).stem}_converted.xlsx",
+                                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                                use_container_width=True
+                                            )
+                                        
+                                        # Display preview
+                                        with st.expander("👀 Preview Excel Data"):
+                                            st.dataframe(df, use_container_width=True)
+                                        
+                                        os.unlink(output.name)
+                                    else:
+                                        st.info("💡 The extracted data doesn't appear to be in a standard table format. You can download it as a text file.")
+                                else:
+                                    st.info("💡 The extracted data doesn't appear to be in a table format. You can download it as a text file and format it manually in Excel.")
+                            except Exception as e:
+                                st.info("💡 Download the text file and open it in Excel to format the data manually.")
                     
                     # Cleanup
                     os.unlink(tmp_path)
                     
                 except Exception as e:
-                    st.error(f"❌ Error processing file: {str(e)}")
-                    st.exception(e)
+                    st.error("❌ Unable to process the file. Please check your PDF and try again.")
+                    st.info("💡 Tip: Make sure your PDF contains readable text and tables.")
+                    # Don't show the actual error to users
+                    
 else:
-    st.warning("⚠️ Please configure your Google API Key in the sidebar to continue.")
-    st.info("""
-    ### How to get your API Key:
-    1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-    2. Create a new API key
-    3. Copy and paste it in the sidebar
-    
-    ### For deployment:
-    Add your API key to Streamlit secrets (recommended for security)
-    """)
+    # Generic error message (no mention of API keys)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.error("⚠️ Service temporarily unavailable")
+        st.info("""
+        ### System Maintenance
+        
+        This service is currently undergoing maintenance. Please try again later or contact support.
+        
+        **Contact Information:**
+        - Email: support@bidv.com.vn
+        - Phone: 1900 9247
+        """)
 
 # Footer
-st.sidebar.markdown("---")
-st.sidebar.markdown("""
-### 📚 Resources
-- [Google AI Studio](https://makersuite.google.com/)
-- [Gemini API Docs](https://ai.google.dev/)
-- [Streamlit Docs](https://docs.streamlit.io/)
-""")
+st.markdown("""
+    <div class='footer'>
+        <p style='font-size: 1.1rem; font-weight: 600; color: #1e3a8a; margin-bottom: 0.5rem;'>
+            Developed by Phương Anh @ BIDV
+        </p>
+        <p style='font-size: 0.9rem; color: #666;'>
+            Bank for Investment and Development of Vietnam
+        </p>
+        <p style='font-size: 0.8rem; color: #999; margin-top: 1rem;'>
+            © 2024 BIDV. All rights reserved.
+        </p>
+    </div>
+""", unsafe_allow_html=True)
+```
+
+## 🎯 Key Changes:
+
+### ✅ **Completely Hidden Technical Details:**
+1. ❌ No API key input fields
+2. ❌ No sidebar (hidden with CSS)
+3. ❌ No mention of "API" anywhere
+4. ❌ No configuration options visible to users
+5. ❌ Generic error messages (no technical details)
+
+### ✅ **What Users See:**
+- Clean upload interface
+- "Convert to Excel" button
+- Download options
+- Professional BIDV branding
+- No technical jargon
+
+### ✅ **What's Hidden:**
+- API key (loaded from Streamlit secrets only)
+- Model selection (hardcoded to best model)
+- All technical configuration
+- Technical error messages
+
+### ✅ **User Experience:**
+```
+User perspective:
+1. Upload PDF ➡️ 
+2. Click Convert ➡️ 
+3. Download Excel ✅
