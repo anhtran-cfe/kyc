@@ -4,7 +4,6 @@ import pandas as pd
 from pathlib import Path
 import tempfile
 import os
-import hashlib
 
 st.set_page_config(
     page_title="PDF to Excel Converter",
@@ -93,22 +92,15 @@ if 'logged_in' not in st.session_state:
 if 'username' not in st.session_state:
     st.session_state.username = None
 
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
 def verify_credentials(username, password):
     try:
-        auth_config = st.secrets["AUTH"]
-        input_password_hash = hash_password(password)
+        # Simple check - get users from secrets
+        users = st.secrets.get("users", {})
         
-        # Check all users
-        for user_key in auth_config:
-            if isinstance(auth_config[user_key], dict):
-                stored_username = auth_config[user_key].get("username")
-                stored_password_hash = auth_config[user_key].get("password_hash")
-                
-                if stored_username == username and stored_password_hash == input_password_hash:
-                    return True
+        # Check if username exists and password matches
+        if username in users:
+            if users[username] == password:
+                return True
         
         return False
     except Exception as e:
