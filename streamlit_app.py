@@ -7,7 +7,7 @@ import os
 import hashlib
 
 st.set_page_config(
-    page_title="PDF to Excel Converter - BIDV",
+    page_title="PDF to Excel Converter",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -22,7 +22,7 @@ st.markdown("""
     .main-header {
         text-align: center;
         padding: 2rem 0;
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border-radius: 10px;
         margin-bottom: 2rem;
@@ -47,7 +47,7 @@ st.markdown("""
     }
     .login-header {
         text-align: center;
-        color: #1e3a8a;
+        color: #667eea;
         margin-bottom: 2rem;
     }
     .footer {
@@ -59,7 +59,7 @@ st.markdown("""
     }
     .stButton>button {
         width: 100%;
-        background-color: #1e3a8a;
+        background-color: #667eea;
         color: white;
         font-weight: 600;
         padding: 0.75rem;
@@ -68,7 +68,7 @@ st.markdown("""
         font-size: 1.1rem;
     }
     .stButton>button:hover {
-        background-color: #3b82f6;
+        background-color: #764ba2;
         border: none;
     }
     .upload-section {
@@ -79,17 +79,11 @@ st.markdown("""
         margin: 2rem 0;
     }
     .info-box {
-        background-color: #f0f9ff;
-        border-left: 4px solid #1e3a8a;
+        background-color: #f3f4f6;
+        border-left: 4px solid #667eea;
         padding: 1rem;
         border-radius: 5px;
         margin: 1rem 0;
-    }
-    .logout-btn {
-        position: fixed;
-        top: 1rem;
-        right: 1rem;
-        z-index: 999;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -104,20 +98,28 @@ def hash_password(password):
 
 def verify_credentials(username, password):
     try:
-        stored_username = st.secrets["AUTH"]["username"]
-        stored_password_hash = st.secrets["AUTH"]["password_hash"]
+        auth_config = st.secrets["AUTH"]
+        input_password_hash = hash_password(password)
         
-        if username == stored_username and hash_password(password) == stored_password_hash:
-            return True
+        # Check all users
+        for user_key in auth_config:
+            if isinstance(auth_config[user_key], dict):
+                stored_username = auth_config[user_key].get("username")
+                stored_password_hash = auth_config[user_key].get("password_hash")
+                
+                if stored_username == username and stored_password_hash == input_password_hash:
+                    return True
+        
         return False
     except Exception as e:
+        st.error(f"Configuration error: {str(e)}")
         return False
 
 def login_page():
     st.markdown("""
         <div class="main-header">
             <h1>📊 PDF to Excel Converter</h1>
-            <p>Bank for Investment and Development of Vietnam</p>
+            <p>Transform your documents instantly</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -146,14 +148,8 @@ def login_page():
     
     st.markdown("""
         <div class='footer'>
-            <p style='font-size: 1.1rem; font-weight: 600; color: #1e3a8a; margin-bottom: 0.5rem;'>
-                Developed by Phương Anh @ BIDV
-            </p>
-            <p style='font-size: 0.9rem; color: #666;'>
-                Bank for Investment and Development of Vietnam
-            </p>
-            <p style='font-size: 0.8rem; color: #999; margin-top: 1rem;'>
-                © 2024 BIDV. All rights reserved.
+            <p style='font-size: 0.9rem; color: #888;'>
+                Created by Phương Anh
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -215,13 +211,11 @@ def main_app():
             with col2:
                 st.info(f"📄 **Selected File:** {uploaded_file.name} ({uploaded_file.size / 1024:.2f} KB)")
             
-            # Set default prompt
             custom_prompt = """Analyze this PDF document and extract all tabular data. 
 Convert the information into a structured format suitable for Excel.
 Include all relevant columns and rows, maintaining the original structure as much as possible.
 Return the data in a clear, organized format."""
             
-            # Advanced options
             with st.expander("⚙️ Advanced Extraction Options (Optional)"):
                 st.markdown("Customize how the data is extracted from your PDF:")
                 
@@ -332,26 +326,12 @@ Format the output as a clear, organized table.""",
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.error("⚠️ Service temporarily unavailable")
-            st.info("""
-            ### System Maintenance
-            
-            This service is currently undergoing maintenance. Please try again later or contact support.
-            
-            **Contact Information:**
-            - Email: support@bidv.com.vn
-            - Phone: 1900 9247
-            """)
+            st.info("Please contact the administrator for support.")
 
     st.markdown("""
         <div class='footer'>
-            <p style='font-size: 1.1rem; font-weight: 600; color: #1e3a8a; margin-bottom: 0.5rem;'>
-                Developed by Phương Anh @ BIDV
-            </p>
-            <p style='font-size: 0.9rem; color: #666;'>
-                Bank for Investment and Development of Vietnam
-            </p>
-            <p style='font-size: 0.8rem; color: #999; margin-top: 1rem;'>
-                © 2024 BIDV. All rights reserved.
+            <p style='font-size: 0.9rem; color: #888;'>
+                Created by Phương Anh
             </p>
         </div>
     """, unsafe_allow_html=True)
